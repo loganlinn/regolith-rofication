@@ -1,7 +1,7 @@
 import re
 import struct
 import subprocess
-from typing import Iterable, List
+from typing import Iterable, List, Sequence
 from datetime import datetime
 
 from gi.repository import GLib
@@ -37,9 +37,19 @@ def strip_tags(value: str) -> str:
 def rofi_entry(notification: Notification, tsformat: str) -> str:
     stripped_summ = strip_tags(notification.summary)
     stripped_app = strip_tags(notification.application)
-    stripped_body = strip_tags(' '.join(notification.body.split()))
-    formatted_ts = f"{datetime.fromtimestamp(notification.timestamp).strftime(tsformat)} " if tsformat else ""
-    return f'<b>{formatted_ts}{stripped_summ}</b> <small>({stripped_app})</small>\n<small>{stripped_body}</small>'
+    stripped_body = strip_tags(" ".join(notification.body.split()))
+
+    formatted_ts = (
+        f"{datetime.fromtimestamp(notification.timestamp).strftime(tsformat)} "
+        if tsformat and notification.timestamp
+        else ""
+    )
+
+    return (
+        f"<b>{formatted_ts}{stripped_summ}</b> <small>({stripped_app})</small>\n"
+        f"<small>{stripped_body}</small>"
+    )
+
 
 def call_rofi(entries: Iterable[str], additional_args: List[str] = None) -> (int, int):
     command = ROFI_COMMAND
@@ -62,10 +72,35 @@ def call_rofi(entries: Iterable[str], additional_args: List[str] = None) -> (int
         return -1, exit_code
 
 
-class RoficationGui():
-    def __init__(self, client: RoficationClient = None):
-        self._client: RoficationClient = RoficationClient() if client is None else client
-        self._tsformat = Resource(env_name='i3xrocks_notify_timestamp_format', xres_name='i3xrocks.notify.timestamp.format', default='').fetch()
+class RoficationGui:
+    def __init__(
+        self, client: RoficationClient = None, reverse: bool = None, timefmt: str = None
+    ):
+        self._client: RoficationClient = (
+            RoficationClient() if client is None else client
+        )
+        self._timefmt = (
+            Resource(
+                env_name="i3xrocks_notify_timestamp_format",
+                xres_name="i3xrocks.notify.timestamp.format",
+                default="",
+            ).fetch()
+            if timefmt is None
+            else timefmt
+        )
+        self._reverse = bool(
+            Resource(
+                env_name="i3xrocks_notify_sort_reverse",
+                xres_name="i3xrocks.notify.sort.reverse",
+                default="false",
+            ).fetch()
+            if reverse is None
+            else reverse
+        )
+
+    def _list_items(self) -> Sequence[Notification]:
+        items = self._client.list()
+        return items if not self._reverse else reversed(items)
 
     def run(self) -> None:
         selected = 0
@@ -77,9 +112,9 @@ class RoficationGui():
             args = []
 
             # reassigns indices of notifications
-            for index, notification in enumerate(self._client.list()):
+            for index, notification in enumerate(self._list_items()):
                 notifications.append(notification)
-                entries.append(rofi_entry(notification, self._tsformat))
+                entries.append(rofi_entry(notification, self._timefmt))
                 if notification.urgency == Urgency.CRITICAL:
                     urgent.append(str(index))
                 if notification.urgency == Urgency.LOW:
