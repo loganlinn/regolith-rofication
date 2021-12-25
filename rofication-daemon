@@ -5,7 +5,13 @@ from pathlib import Path
 from rofication import RoficationServer, NotificationQueue, RoficationDbusService
 
 if __name__ == '__main__':
-    queue_dir = os.path.expanduser('~/.cache/rofication')
+    cache_home = os.environ['XDG_CACHE_HOME'] if (
+        'XDG_CACHE_HOME' in os.environ
+        and os.path.isdir(os.environ['XDG_CACHE_HOME'])
+        and os.access(os.environ['XDG_CACHE_HOME'], os.W_OK)
+    ) else '~/.cache'
+
+    queue_dir = os.path.expanduser(os.path.join(cache_home, 'rofication'))
     Path(queue_dir).mkdir(parents=True, exist_ok=True)
 
     queue_file = os.path.join(queue_dir, "notifications.json")
