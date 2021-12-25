@@ -37,7 +37,7 @@ CLASSIFIERS = [
     'Programming Language :: Python :: Implementation :: CPython'
 ]
 
-REQUIRED = ['PyGObject>=3.26.1', 'dbus-python>=1.2.6']
+REQUIRED = ['PyGObject>=3.26.1', 'dbus-python>=1.2.6', 'xdg>=3.0.0']
 
 PACKAGES = ['rofication', 'rofication.resources']
 SCRIPTS = ['rofication-daemon', 'rofication-gui', 'rofication-status']
